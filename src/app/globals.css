@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  /* This is how we define your Prestige Traders colors in v4 */
+  --color-prestige-black: #0a0a0a;
+  --color-prestige-blue: #2563eb;
+  --color-prestige-gray: #f4f4f5;
+}
+
+/* Base styles to make sure things look professional even without classes */
+@layer base {
+  body {
+    @apply bg-prestige-gray text-slate-900;
+  }
+}

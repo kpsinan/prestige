@@ -1,0 +1,33 @@
+// src/lib/shopify/queries.ts
+
+export const getProductQuery = `
+  query getProduct($handle: String!) {
+    product(handle: $handle) {
+      id
+      title
+      handle
+      description
+      priceRange {
+        maxVariantPrice {
+          amount
+          currencyCode
+        }
+      }
+      images(first: 1) {
+        edges {
+          node {
+            url
+            altText
+          }
+        }
+      }
+      variants(first: 1) {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  }
+`;
