@@ -1,78 +1,82 @@
-// src/app/products/page.tsx
+// src/app/products/[handle]/page.tsx
 import Image from "next/image";
-import Link from "next/link";
-import { getAllProducts } from "../../../lib/shopify"; // Fixed Relative Path
+import { notFound } from "next/navigation";
+import { getProduct } from "../../../lib/shopify";
 
-export default async function AllProductsPage() {
-  const products = await getAllProducts();
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ handle: string }>;
+}) {
+  const { handle } = await params;
+  const product = await getProduct(handle);
+
+  if (!product) {
+    notFound();
+  }
+
+  const price = product.priceRange.maxVariantPrice.amount;
+  const currency = product.priceRange.maxVariantPrice.currencyCode;
+  const mainImage = product.images.edges[0]?.node;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] pb-20">
-      {/* Dynamic Header Section */}
-      <section className="bg-white border-b border-gray-100 pt-20 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="inline-block px-3 py-1 rounded-full bg-blue-50 border border-blue-100 mb-4">
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Complete Inventory</span>
+    <div className="min-h-screen bg-white pb-20">
+      <div className="max-w-7xl mx-auto px-6 pt-12">
+        
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-8">
+          <a href="/" className="hover:text-blue-600">Home</a>
+          <span>/</span>
+          <a href="/products" className="hover:text-blue-600">Inventory</a>
+          <span>/</span>
+          <span className="text-gray-900 truncate">{product.title}</span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          
+          {/* LEFT: Image */}
+          <div className="relative aspect-square bg-[#F8F9FA] rounded-3xl border border-gray-100 overflow-hidden">
+            {mainImage ? (
+              <Image
+                src={mainImage.url}
+                alt={mainImage.altText || product.title}
+                fill
+                priority
+                className="object-contain p-12"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-300">No Image</div>
+            )}
           </div>
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-4">
-            Genuine Spare Parts
-          </h1>
-          <p className="text-gray-500 max-w-2xl text-lg font-medium leading-relaxed">
-            Sourced directly for performance and reliability. Every component in our {products.length} product catalog is verified for fitment.
-          </p>
-        </div>
-      </section>
 
-      {/* Product Gallery */}
-      <div className="max-w-7xl mx-auto px-6 mt-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
-          {products.map((product: any) => {
-            const price = product.priceRange.maxVariantPrice.amount;
-            const currency = product.priceRange.maxVariantPrice.currencyCode;
-            const imageUrl = product.images.edges[0]?.node.url;
+          {/* RIGHT: Details */}
+          <div className="flex flex-col">
+            <div className="border-b border-gray-100 pb-8 mb-8">
+              <p className="text-blue-600 font-bold tracking-widest text-[10px] uppercase mb-3">Genuine Part</p>
+              <h1 className="text-4xl font-black text-gray-900 tracking-tighter mb-4 uppercase leading-none">
+                {product.title}
+              </h1>
+              <p className="text-3xl font-bold text-gray-900">
+                {new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(price)}
+              </p>
+            </div>
 
-            return (
-              <Link 
-                href={`/products/${product.handle}`} 
-                key={product.id}
-                className="group flex flex-col"
-              >
-                {/* Image Card */}
-                <div className="aspect-square relative bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm group-hover:shadow-2xl group-hover:shadow-blue-900/10 group-hover:-translate-y-2 transition-all duration-500">
-                  {imageUrl ? (
-                    <Image 
-                      src={imageUrl} 
-                      alt={product.title} 
-                      fill 
-                      className="object-contain p-10 transition-transform duration-700 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-300 font-bold uppercase tracking-widest text-xs">No Preview</div>
-                  )}
-                  <div className="absolute top-6 left-6">
-                    <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-100">
-                      Genuine
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Description</h3>
+                {/* THE FIX: We ensure __html always gets a string, even if product.descriptionHtml is null */}
+                <div 
+                  className="text-gray-600 leading-relaxed text-sm prose prose-blue max-w-none"
+                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml || "" }} 
+                />
+              </div>
 
-                {/* Product Detail */}
-                <div className="mt-6 px-2">
-                  <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight line-clamp-1 group-hover:text-blue-600 transition-colors">
-                    {product.title}
-                  </h3>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-lg font-bold text-gray-900">
-                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(price)}
-                    </p>
-                    <span className="text-[10px] font-black text-blue-600 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300">
-                      VIEW PART →
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+              <button className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-blue-600 transition-all shadow-xl shadow-black/10">
+                Order Now
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
