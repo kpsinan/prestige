@@ -6,7 +6,7 @@ export const getProductQuery = `
       id
       title
       handle
-      description
+      descriptionHtml
       priceRange {
         maxVariantPrice {
           amount
@@ -31,6 +31,7 @@ export const getProductQuery = `
     }
   }
 `;
+
 export const getAllProductsQuery = `
   query getAllProducts {
     products(first: 20) {

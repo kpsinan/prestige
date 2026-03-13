@@ -1,46 +1,80 @@
 // src/lib/shopify/index.ts
-
-import { getProductQuery } from './queries';
-import { getAllProductsQuery } from './queries';
+import { getProductQuery, getAllProductsQuery } from "./queries";
 
 const domain = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
-const storefrontAccessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+const accessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
 
-export async function shopifyFetch({ query, variables = {} }: { query: string, variables?: any }) {
+async function shopifyFetch({ query, variables = {}, cache = 'force-cache' }: any) {
   const endpoint = `https://${domain}/api/2024-01/graphql.json`;
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Storefront-Access-Token': storefrontAccessToken!,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  try {
+    const result = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Storefront-Access-Token': accessToken!,
+      },
+      body: JSON.stringify({ query, variables }),
+      next: { revalidate: 60 }, // Re-check for stock/price changes every minute
+    });
 
-  const { data, errors } = await response.json();
-  
-  if (errors) {
-    console.error('Shopify API Errors:', errors);
-    throw new Error('Failed to fetch from Shopify Storefront API');
+    const body = await result.json();
+
+    if (body.errors) {
+      throw body.errors[0];
+    }
+
+    return body.data;
+  } catch (e) {
+    console.error('Shopify Fetch Error:', e);
+    throw {
+      status: 500,
+      message: 'Error fetching data from Shopify',
+    };
   }
-  
-  return data;
 }
 
-// ADD THIS NEW FUNCTION TO THE BOTTOM
+// 1. Fetch all products for the Inventory page
+export async function getAllProducts() {
+  const data = await shopifyFetch({ query: getAllProductsQuery });
+  return data.products.edges.map((edge: any) => edge.node);
+}
+
+// 2. Fetch a single product for the Product Handle page
 export async function getProduct(handle: string) {
   const data = await shopifyFetch({
     query: getProductQuery,
-    variables: { handle }
+    variables: { handle },
   });
   return data.product;
 }
 
-export async function getAllProducts() {
+// 3. Create a real Shopify checkout link
+export async function createCheckout(variantId: string) {
+  const mutation = `
+    mutation checkoutCreate($input: CheckoutCreateInput!) {
+      checkoutCreate(input: $input) {
+        checkout {
+          webUrl
+        }
+        checkoutUserErrors {
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      lineItems: [{ variantId, quantity: 1 }]
+    }
+  };
+
   const data = await shopifyFetch({
-    query: getAllProductsQuery,
+    query: mutation,
+    variables,
+    cache: 'no-store'
   });
-  // Transform the Shopify "edges/nodes" structure into a clean array
-  return data.products.edges.map((edge: any) => edge.node);
+
+  return data.checkoutCreate.checkout.webUrl;
 }
