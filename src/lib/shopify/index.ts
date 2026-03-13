@@ -1,6 +1,7 @@
 // src/lib/shopify/index.ts
 
 import { getProductQuery } from './queries';
+import { getAllProductsQuery } from './queries';
 
 const domain = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
 const storefrontAccessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
@@ -34,4 +35,12 @@ export async function getProduct(handle: string) {
     variables: { handle }
   });
   return data.product;
+}
+
+export async function getAllProducts() {
+  const data = await shopifyFetch({
+    query: getAllProductsQuery,
+  });
+  // Transform the Shopify "edges/nodes" structure into a clean array
+  return data.products.edges.map((edge: any) => edge.node);
 }

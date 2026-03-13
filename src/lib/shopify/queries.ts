@@ -31,3 +31,30 @@ export const getProductQuery = `
     }
   }
 `;
+export const getAllProductsQuery = `
+  query getAllProducts {
+    products(first: 20) {
+      edges {
+        node {
+          id
+          title
+          handle
+          priceRange {
+            maxVariantPrice {
+              amount
+              currencyCode
+            }
+          }
+          images(first: 1) {
+            edges {
+              node {
+                url
+                altText
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;

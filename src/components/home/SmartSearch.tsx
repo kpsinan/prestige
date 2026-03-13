@@ -3,68 +3,83 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { VEHICLE_HIERARCHY, Brand } from "../../lib/constants"; // Changed to relative path
+import Image from "next/image";
+import { VEHICLE_HIERARCHY } from "../../lib/constants";
 
-// We tell TypeScript exactly what a "Part" looks like
-type Part = {
-  name: string;
-  handle: string;
-};
+// Type definition to keep TypeScript happy
+type BrandKey = keyof typeof VEHICLE_HIERARCHY;
 
 export default function SmartSearch() {
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<BrandKey | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
-  const brands = Object.keys(VEHICLE_HIERARCHY) as Brand[];
-  const models = selectedBrand ? Object.keys(VEHICLE_HIERARCHY[selectedBrand]) : [];
+  const brands = Object.keys(VEHICLE_HIERARCHY) as BrandKey[];
   
-  // Typecasting the parts array so TypeScript knows what it is handling
-  const parts: Part[] = selectedBrand && selectedModel 
-    ? (VEHICLE_HIERARCHY[selectedBrand][selectedModel as keyof typeof VEHICLE_HIERARCHY[typeof selectedBrand]] as Part[]) 
+  const currentBrandData = selectedBrand ? VEHICLE_HIERARCHY[selectedBrand] : null;
+  const models = currentBrandData ? Object.keys(currentBrandData.models) : [];
+  
+  // Safely extract parts based on the selected model
+  const parts = (selectedBrand && selectedModel && currentBrandData) 
+    ? (currentBrandData.models as any)[selectedModel] || []
     : [];
 
-  const handleBrandClick = (brand: Brand) => {
-    setSelectedBrand(brand);
-    setSelectedModel(null); 
-  };
-
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Find Parts For Your Vehicle</h2>
-
-      {/* STEP 1: Select Brand */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Select Brand</h3>
-        <div className="flex gap-3 flex-wrap">
+    <div className="w-full bg-white rounded-3xl overflow-hidden">
+      {/* STEP 1: BRAND LOGOS */}
+      <div className="p-6 md:p-8">
+        <div className="flex items-center gap-2 mb-6">
+          <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">01</span>
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+            Select Manufacturer
+          </label>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {brands.map((brand) => (
             <button
               key={brand}
-              onClick={() => handleBrandClick(brand)}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                selectedBrand === brand
-                  ? "bg-black text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              onClick={() => { setSelectedBrand(brand); setSelectedModel(null); }}
+              className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 ${
+                selectedBrand === brand 
+                ? "border-blue-600 bg-blue-50/30 shadow-lg shadow-blue-900/5" 
+                : "border-gray-50 bg-gray-50/50 hover:border-gray-200 hover:bg-white"
               }`}
             >
-              {brand}
+              <div className="relative w-12 h-12 mb-3">
+                <Image 
+                  src={VEHICLE_HIERARCHY[brand].logo} 
+                  alt={brand} 
+                  fill 
+                  className={`object-contain transition-all duration-500 ${selectedBrand === brand ? "scale-110" : "grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100"}`}
+                />
+              </div>
+              <span className={`text-sm font-bold tracking-tight ${selectedBrand === brand ? "text-blue-600" : "text-gray-500"}`}>
+                {brand}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* STEP 2: Select Model */}
+      {/* STEP 2: MODEL SELECTION */}
       {selectedBrand && (
-        <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">2. Select Model</h3>
-          <div className="flex gap-3 flex-wrap">
+        <div className="px-6 md:px-8 py-8 bg-gray-50/50 border-y border-gray-100 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded">02</span>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+              Select {selectedBrand} Model
+            </label>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
             {models.map((model) => (
               <button
                 key={model}
                 onClick={() => setSelectedModel(model)}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  selectedModel === model
-                    ? "bg-black text-white shadow-md"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 ${
+                  selectedModel === model 
+                  ? "bg-black text-white shadow-xl shadow-black/20 scale-105" 
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-black hover:text-black"
                 }`}
               >
                 {model}
@@ -74,20 +89,35 @@ export default function SmartSearch() {
         </div>
       )}
 
-      {/* STEP 3: Available Parts */}
+      {/* STEP 3: PARTS RESULTS */}
       {selectedModel && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300 border-t pt-6 mt-2">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">3. Available Parts</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Now TypeScript knows that 'part' has a .handle and .name */}
-            {parts.map((part) => (
+        <div className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">03</span>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+              Available Parts for {selectedModel}
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {parts.map((part: any) => (
               <Link 
                 href={`/products/${part.handle}`} 
                 key={part.handle}
-                className="group flex flex-col justify-between p-4 border rounded-lg hover:border-black hover:shadow-md transition-all"
+                className="group flex items-center justify-between p-5 bg-white border border-gray-100 rounded-2xl hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-300"
               >
-                <span className="font-semibold text-gray-800 group-hover:text-black">{part.name}</span>
-                <span className="text-sm text-blue-600 mt-2 font-medium">View Details →</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors duration-300">
+                    <span className="text-xl group-hover:scale-110 transition-transform">⚙️</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{part.name}</h4>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Verified Genuine</p>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <span className="text-lg">→</span>
+                </div>
               </Link>
             ))}
           </div>

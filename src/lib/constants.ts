@@ -2,20 +2,24 @@
 
 export const VEHICLE_HIERARCHY = {
   Toyota: {
-    Innova: [
-      { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
-      { name: "TOYOTA WHEELCAP", handle: "toyota-wheelcap" },
-    ],
-    Crysta: [
-      { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
-      { name: "TOYOTA WHEELCAP", handle: "toyota-wheelcap" },
-    ],
-    Fortuner: [
-      { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
-    ],
+    logo: "/toyota.svg", // Replace with local path later
+    models: {
+      Innova: [
+        { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
+        { name: "TOYOTA WHEELCAP", handle: "toyota-wheelcap" },
+        { name: "TOYOTA REAR AC VENT", handle: "toyota-rear-ac-vent" },
+      ],
+      Crysta: [
+        { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
+        { name: "TOYOTA WHEELCAP", handle: "toyota-wheelcap" },
+        { name: "TOYOTA REAR AC VENT", handle: "toyota-rear-ac-vent" },
+      ],
+      Fortuner: [
+        { name: "TOYOTA GR STEERING WHEEL", handle: "toyota-gr-steering-wheel" },
+        { name: "TOYOTA WHEELCAP", handle: "toyota-wheelcap" },
+      ],
+    },
   },
-  // You can easily add more brands here later
-  // Suzuki: { Swift: [...], Baleno: [...] }
+  // Add more brands here following the exact same structure:
+  // Suzuki: { logo: "...", models: { Swift: [...], Baleno: [...] } }
 };
-
-export type Brand = keyof typeof VEHICLE_HIERARCHY;
