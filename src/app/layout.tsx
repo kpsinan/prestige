@@ -1,5 +1,3 @@
-// src/app/layout.tsx
-
 import type { Metadata } from "next";
 import "./globals.css";
 // Using relative paths to fix the "Module not found" errors
@@ -18,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-gray-50 text-gray-900 flex flex-col min-h-screen">
+      <body className="antialiased bg-[#F9FAFB] text-[#0B0F19] flex flex-col min-h-screen">
         <Header />
         <main className="flex-grow">
           {children}

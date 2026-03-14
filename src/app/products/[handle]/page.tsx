@@ -1,7 +1,8 @@
-// src/app/products/[handle]/page.tsx
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProduct } from "../../../lib/shopify";
+import AddToCart from "../../../components/AddToCart"; // <-- Import the new component
 
 export default async function ProductPage({
   params,
@@ -18,62 +19,77 @@ export default async function ProductPage({
   const price = product.priceRange.maxVariantPrice.amount;
   const currency = product.priceRange.maxVariantPrice.currencyCode;
   const mainImage = product.images.edges[0]?.node;
+  
+  // Shopify needs the specific Variant ID to add to cart
+  const defaultVariantId = product.variants?.edges[0]?.node?.id;
+  const isAvailable = product.availableForSale;
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      <div className="max-w-7xl mx-auto px-6 pt-12">
+    <div className="min-h-screen bg-prestige-light pb-20">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 md:pt-12">
         
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-8">
-          <a href="/" className="hover:text-blue-600">Home</a>
+        <nav className="flex items-center gap-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-prestige-gray mb-8">
+          <Link href="/" className="hover:text-prestige-primary transition-colors">Home</Link>
           <span>/</span>
-          <a href="/products" className="hover:text-blue-600">Inventory</a>
+          <Link href="/products" className="hover:text-prestige-primary transition-colors">Inventory</Link>
           <span>/</span>
-          <span className="text-gray-900 truncate">{product.title}</span>
+          <span className="text-prestige-dark truncate">{product.title}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           
           {/* LEFT: Image */}
-          <div className="relative aspect-square bg-[#F8F9FA] rounded-3xl border border-gray-100 overflow-hidden">
+          <div className="relative aspect-square bg-white rounded-[2rem] md:rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
             {mainImage ? (
               <Image
                 src={mainImage.url}
                 alt={mainImage.altText || product.title}
                 fill
                 priority
-                className="object-contain p-12"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-contain p-8 md:p-12"
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-300">No Image</div>
+              <div className="flex items-center justify-center h-full text-prestige-gray/50 font-bold uppercase tracking-widest text-xs">
+                No Image Available
+              </div>
             )}
           </div>
 
           {/* RIGHT: Details */}
           <div className="flex flex-col">
-            <div className="border-b border-gray-100 pb-8 mb-8">
-              <p className="text-blue-600 font-bold tracking-widest text-[10px] uppercase mb-3">Genuine Part</p>
-              <h1 className="text-4xl font-black text-gray-900 tracking-tighter mb-4 uppercase leading-none">
+            <div className="border-b border-gray-200 pb-8 mb-8">
+              <p className="text-prestige-primary font-bold tracking-widest text-[10px] uppercase mb-3">Genuine Part</p>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-prestige-dark tracking-tighter mb-4 uppercase leading-none">
                 {product.title}
               </h1>
-              <p className="text-3xl font-bold text-gray-900">
-                {new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(price)}
+              <p className="text-2xl md:text-3xl font-bold text-prestige-dark">
+                {new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(Number(price))}
               </p>
             </div>
 
             <div className="space-y-8">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Description</h3>
-                {/* THE FIX: We ensure __html always gets a string, even if product.descriptionHtml is null */}
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-prestige-gray mb-4">Description</h3>
                 <div 
-                  className="text-gray-600 leading-relaxed text-sm prose prose-blue max-w-none"
+                  className="text-prestige-dark/80 leading-relaxed text-sm prose prose-blue max-w-none"
                   dangerouslySetInnerHTML={{ __html: product.descriptionHtml || "" }} 
                 />
               </div>
 
-              <button className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-blue-600 transition-all shadow-xl shadow-black/10">
-                Order Now
-              </button>
+              {/* Replaced the static button with our new Interactive Client Component 
+                Passing the variantId and availability status
+              */}
+              {defaultVariantId ? (
+                <AddToCart 
+                  variantId={defaultVariantId} 
+                  availableForSale={isAvailable} 
+                />
+              ) : (
+                <p className="text-red-500 font-bold">Product configuration error.</p>
+              )}
+              
             </div>
           </div>
 

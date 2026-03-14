@@ -1,8 +1,6 @@
-// tailwind.config.ts
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  // We updated this section to check BOTH src/ and root level folders
   content: [
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -13,15 +11,18 @@ const config: Config = {
     extend: {
       colors: {
         prestige: {
-          black: "#0A0A0A", 
-          dark: "#1A1A1A",
-          gray: "#F4F4F5",  
-          blue: "#2563EB",  
-          accent: "#EF4444", 
+          primary: "#2563EB", // Primary (blue-600)
+          accent: "#60A5FA",  // Accent (blue-400)
+          dark: "#0B0F19",    // Dark
+          gray: "#6B7280",    // Gray
+          light: "#F9FAFB",   // Light
         }
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'], 
+      },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite', // Custom slow spin for Settings icons
       }
     },
   },
