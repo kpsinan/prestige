@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image"; // Added for logo support
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -101,14 +102,18 @@ export default function Header() {
               
               <Link 
                 href="/" 
-                className="relative z-50 text-2xl md:text-3xl font-black tracking-tight hover:scale-[1.02] transition-transform active:scale-95"
+                className="relative z-50 flex items-center transition-transform hover:scale-[1.02] active:scale-95"
                 onClick={() => { setIsMobileMenuOpen(false); setIsMobileSearchOpen(false); }}
               >
-                {/* Gradient Text Logo */}
-                <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-800 bg-clip-text text-transparent">
-                  PRESTIGE
-                </span>
-                <span className="text-blue-600">.</span>
+                {/* Logo Image instead of Text */}
+<Image 
+  src="/logo.svg" 
+  alt="Prestige Logo" 
+  width={200} // Increased base width for better resolution
+  height={60} // Increased base height
+  className="h-12 md:h-16 w-auto object-contain" // Adjusted Tailwind classes
+  priority
+/>
               </Link>
             </div>
 
@@ -154,7 +159,7 @@ export default function Header() {
             </div>
           </div>
 
-          {/* MOBILE SEARCH SLIDE-DOWN (Absolute positioning to prevent dropdown clipping) */}
+          {/* MOBILE SEARCH SLIDE-DOWN */}
           <AnimatePresence>
             {isMobileSearchOpen && (
               <motion.div
