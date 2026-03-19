@@ -5,7 +5,7 @@ const storefrontAccessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_
 const endpoint = `https://${domain}/api/2024-01/graphql.json`;
 
 /**
- * Base Fetch Function
+ * Base Fetch Function with Enhanced Error Logging
  */
 async function shopifyFetch({ query, variables }: { query: string; variables?: any }) {
   try {
@@ -20,24 +20,24 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
       next: { revalidate: 60 } 
     });
 
-    const { data, errors } = await result.json();
+    const response = await result.json();
 
-    if (errors) {
-      console.error('Shopify API Errors:', errors);
+    if (response.errors) {
+      console.error('Shopify API Error Detail:', JSON.stringify(response.errors, null, 2));
       throw new Error('Failed to fetch from Shopify API');
     }
 
-    return { body: data };
+    return { body: response.data };
   } catch (error) {
-    console.error('Error fetching from Shopify:', error);
+    console.error('Network or Parse Error fetching from Shopify:', error);
     throw error;
   }
 }
 
 /**
- * Fetch All Products
+ * Fetch All Products (Includes Variant IDs for Cart)
  */
-export async function getAllProducts(): Promise<ShopifyProduct[]> {
+export async function getAllProducts(): Promise<any[]> {
   const query = `
     query getProducts {
       products(first: 100) {
@@ -61,6 +61,14 @@ export async function getAllProducts(): Promise<ShopifyProduct[]> {
                 }
               }
             }
+            variants(first: 1) {
+              edges {
+                node {
+                  id
+                  availableForSale
+                }
+              }
+            }
           }
         }
       }
@@ -72,9 +80,9 @@ export async function getAllProducts(): Promise<ShopifyProduct[]> {
 }
 
 /**
- * Fetch a Single Product by Handle
+ * Fetch a Single Product by Handle (Updated to fetch up to 10 images)
  */
-export async function getProduct(handle: string): Promise<ShopifyProduct | null> {
+export async function getProduct(handle: string): Promise<any | null> {
   const query = `
     query getProduct($handle: String!) {
       product(handle: $handle) {
@@ -89,7 +97,7 @@ export async function getProduct(handle: string): Promise<ShopifyProduct | null>
             currencyCode
           }
         }
-        images(first: 5) {
+        images(first: 10) {
           edges {
             node {
               url
@@ -114,9 +122,55 @@ export async function getProduct(handle: string): Promise<ShopifyProduct | null>
 }
 
 /**
- * Create a Checkout URL for "Buy Now"
+ * Fetch Products by Collection Handle
  */
-export async function createCheckout(variantId: string): Promise<string> {
+export async function getCollectionProducts(handle: string): Promise<any[]> {
+  const query = `
+    query getCollectionProducts($handle: String!) {
+      collection(handle: $handle) {
+        products(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+              availableForSale
+              priceRange {
+                maxVariantPrice {
+                  amount
+                  currencyCode
+                }
+              }
+              images(first: 1) {
+                edges {
+                  node {
+                    url
+                    altText
+                  }
+                }
+              }
+              variants(first: 1) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await shopifyFetch({ query, variables: { handle } });
+  return response.body?.collection?.products?.edges.map((edge: any) => edge.node) || [];
+}
+
+/**
+ * Create a Checkout URL for Multi-Item Cart
+ */
+export async function createCheckout(lines: { merchandiseId: string; quantity: number }[]): Promise<string> {
   const query = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -133,12 +187,7 @@ export async function createCheckout(variantId: string): Promise<string> {
 
   const variables = {
     input: {
-      lines: [
-        {
-          merchandiseId: variantId,
-          quantity: 1
-        }
-      ]
+      lines: lines
     }
   };
 
@@ -146,7 +195,9 @@ export async function createCheckout(variantId: string): Promise<string> {
   const checkoutUrl = response.body?.cartCreate?.cart?.checkoutUrl;
   
   if (!checkoutUrl) {
-    throw new Error('Could not create checkout URL');
+    const userErrors = response.body?.cartCreate?.userErrors;
+    console.error('Shopify Checkout User Errors:', userErrors);
+    throw new Error(userErrors?.[0]?.message || 'Could not create checkout URL');
   }
 
   return checkoutUrl;

@@ -1,98 +1,100 @@
-import Image from "next/image";
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getProduct } from "../../../lib/shopify";
-import AddToCart from "../../../components/AddToCart"; // <-- Import the new component
+import { notFound } from "next/navigation";
+import AddToCart from "../../../components/AddToCart";
+import ProductGallery from "../../../components/ProductGallery"; 
 
 export default async function ProductPage({
   params,
 }: {
   params: Promise<{ handle: string }>;
 }) {
+  // 1. Await params (Next.js 15+ requirement)
   const { handle } = await params;
+  
+  // 2. Fetch the single product from Shopify
   const product = await getProduct(handle);
 
+  // 3. Handle 404 if product doesn't exist
   if (!product) {
     notFound();
   }
 
+  // 4. Safely extract required data
+  const variantId = product.variants?.edges[0]?.node?.id;
   const price = product.priceRange.maxVariantPrice.amount;
   const currency = product.priceRange.maxVariantPrice.currencyCode;
-  const mainImage = product.images.edges[0]?.node;
-  
-  // Shopify needs the specific Variant ID to add to cart
-  const defaultVariantId = product.variants?.edges[0]?.node?.id;
-  const isAvailable = product.availableForSale;
 
   return (
-    <div className="min-h-screen bg-prestige-light pb-20">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 md:pt-12">
+    // pb-36 ensures mobile users can scroll past the sticky CTA bar
+    <div className="min-h-screen bg-white py-8 md:py-20 pb-36 md:pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-prestige-gray mb-8">
-          <Link href="/" className="hover:text-prestige-primary transition-colors">Home</Link>
-          <span>/</span>
-          <Link href="/products" className="hover:text-prestige-primary transition-colors">Inventory</Link>
-          <span>/</span>
-          <span className="text-prestige-dark truncate">{product.title}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
           
-          {/* LEFT: Image */}
-          <div className="relative aspect-square bg-white rounded-[2rem] md:rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-            {mainImage ? (
-              <Image
-                src={mainImage.url}
-                alt={mainImage.altText || product.title}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain p-8 md:p-12"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-prestige-gray/50 font-bold uppercase tracking-widest text-xs">
-                No Image Available
-              </div>
-            )}
+          {/* ========================================== */}
+          {/* LEFT COLUMN: DYNAMIC PRODUCT GALLERY       */}
+          {/* ========================================== */}
+          <div className="w-full flex flex-col">
+            <ProductGallery 
+              images={product.images?.edges || []} 
+              title={product.title} 
+            />
           </div>
 
-          {/* RIGHT: Details */}
+          {/* ========================================== */}
+          {/* RIGHT COLUMN: PRODUCT DETAILS & ACTION     */}
+          {/* ========================================== */}
           <div className="flex flex-col">
-            <div className="border-b border-gray-200 pb-8 mb-8">
-              <p className="text-prestige-primary font-bold tracking-widest text-[10px] uppercase mb-3">Genuine Part</p>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-prestige-dark tracking-tighter mb-4 uppercase leading-none">
-                {product.title}
-              </h1>
-              <p className="text-2xl md:text-3xl font-bold text-prestige-dark">
-                {new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(Number(price))}
-              </p>
+            
+            {/* 1. Title */}
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight mb-3 md:mb-4 leading-tight">
+              {product.title}
+            </h1>
+            
+            {/* 2. Price */}
+            <p className="text-3xl md:text-4xl font-black text-[#1e3a8a] mb-6">
+              {new Intl.NumberFormat('en-IN', { 
+                style: 'currency', 
+                currency, 
+                maximumFractionDigits: 0 
+              }).format(Number(price))}
+            </p>
+
+            {/* 3. Action Buttons (Positioned high up for maximum conversion) */}
+            <div className="mb-10 w-full">
+              <AddToCart 
+                product={product} 
+                variantId={variantId} 
+                availableForSale={product.availableForSale} 
+              />
             </div>
 
-            <div className="space-y-8">
-              <div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-prestige-gray mb-4">Description</h3>
-                <div 
-                  className="text-prestige-dark/80 leading-relaxed text-sm prose prose-blue max-w-none"
-                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml || "" }} 
-                />
+            <hr className="border-gray-100 mb-8" />
+
+            {/* 4. Product Description (Pushed below the buttons) */}
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 uppercase tracking-wider text-sm">
+                Product Details
+              </h3>
+              <div 
+                className="prose prose-sm md:prose-base text-gray-600 max-w-none prose-p:leading-relaxed prose-li:marker:text-blue-500"
+                dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+              />
+            </div>
+
+            {/* Trust Badges (Reassurance below description) */}
+            <div className="mt-8 grid grid-cols-2 gap-4 pt-8 border-t border-gray-100">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Fast Dispatch</span>
+                <span className="text-xs text-gray-500">Ships across Kerala</span>
               </div>
-
-              {/* Replaced the static button with our new Interactive Client Component 
-                Passing the variantId and availability status
-              */}
-              {defaultVariantId ? (
-                <AddToCart 
-                  variantId={defaultVariantId} 
-                  availableForSale={isAvailable} 
-                />
-              ) : (
-                <p className="text-red-500 font-bold">Product configuration error.</p>
-              )}
-              
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Secure Payment</span>
+                <span className="text-xs text-gray-500">256-bit SSL encrypted</span>
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
     </div>

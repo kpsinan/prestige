@@ -11,18 +11,19 @@ const config: Config = {
     extend: {
       colors: {
         prestige: {
-          primary: "#2563EB", // Primary (blue-600)
-          accent: "#60A5FA",  // Accent (blue-400)
-          dark: "#0B0F19",    // Dark
-          gray: "#6B7280",    // Gray
-          light: "#F9FAFB",   // Light
+          primary: "#0F766E", // Deep Teal - Trustworthy and modern
+          accent: "#EA580C",  // Vibrant Orange - High conversion for buttons
+          dark: "#1E293B",    // Slate 800 - Softer, premium black for text
+          gray: "#94A3B8",    // Slate 400 - Muted text and borders
+          light: "#F8FAFC",   // Slate 50 - Clean, crisp background
+          white: "#FFFFFF",
         }
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'], 
       },
       animation: {
-        'spin-slow': 'spin 3s linear infinite', // Custom slow spin for Settings icons
+        'spin-slow': 'spin 3s linear infinite', 
       }
     },
   },

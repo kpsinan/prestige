@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  /* This is how we define your Prestige Traders colors in v4 */
-  --color-prestige-black: #0a0a0a;
-  --color-prestige-blue: #2563eb;
-  --color-prestige-gray: #f4f4f5;
+  /* Updated Prestige Traders colors for multi-niche store */
+  --color-prestige-dark: #1E293B;
+  --color-prestige-primary: #0F766E;
+  --color-prestige-accent: #EA580C;
+  --color-prestige-light: #F8FAFC;
 }
 
-/* Base styles to make sure things look professional even without classes */
+/* Base styles for a professional e-commerce look */
 @layer base {
   body {
-    @apply bg-prestige-gray text-slate-900;
+    @apply bg-prestige-light text-prestige-dark antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
   }
 }
