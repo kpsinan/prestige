@@ -346,7 +346,8 @@ export default function HomePage() {
                 
                 <Link href={`/products/${prod.handle}`} className="relative w-full aspect-square bg-gray-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
                   {imageUrl ? (
-                    <img src={imageUrl} alt={prod.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {/* CHANGED THIS LINE: object-cover -> object-contain p-4 */}
+                    <img src={imageUrl} alt={prod.title} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <ShoppingBag className="w-10 h-10 text-gray-200" />
                   )}

@@ -167,6 +167,41 @@ export async function getCollectionProducts(handle: string): Promise<any[]> {
   return response.body?.collection?.products?.edges.map((edge: any) => edge.node) || [];
 }
 
+export async function searchProducts(searchTerm: string): Promise<any[]> {
+  const query = `
+    query searchProducts($query: String!) {
+      products(first: 24, query: $query) {
+        edges {
+          node {
+            id
+            title
+            handle
+            availableForSale
+            priceRange {
+              maxVariantPrice {
+                amount
+                currencyCode
+              }
+            }
+            images(first: 1) {
+              edges {
+                node {
+                  url
+                  altText
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  // Shopify's GraphQL uses the 'query' variable to search titles, descriptions, and tags
+  const response = await shopifyFetch({ query, variables: { query: searchTerm } });
+  return response.body?.products?.edges.map((edge: any) => edge.node) || [];
+}
+
 /**
  * Create a Checkout URL for Multi-Item Cart
  */

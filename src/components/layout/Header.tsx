@@ -14,10 +14,13 @@ import {
   MapPin,
   ChevronDown
 } from "lucide-react";
+import SearchBar from "../SearchBar";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  
   const pathname = usePathname();
 
   // Track scroll position for shrinking/glassmorphism effect
@@ -29,7 +32,18 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // E-commerce Navigation Links with metadata for advanced UI
+  // Handlers to prevent menu and search from being open at the same time
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+    setIsMobileSearchOpen(false);
+  };
+
+  const toggleMobileSearch = () => {
+    setIsMobileSearchOpen(!isMobileSearchOpen);
+    setIsMobileMenuOpen(false);
+  };
+
+  // E-commerce Navigation Links
   const navLinks = [
     { name: "Home", href: "/", hasDropdown: false },
     { name: "Auto Parts", href: "/collections/auto-parts", hasDropdown: true },
@@ -37,13 +51,12 @@ export default function Header() {
     { name: "Today's Deals", href: "/collections/deals", hasDropdown: false, isHighlight: true },
   ];
 
-  // Framer Motion Variants for Mobile Menu Stagger
+  // Framer Motion Variants
   const mobileMenuVariants = {
     hidden: { opacity: 0, height: 0 },
     show: { 
       opacity: 1, 
       height: "auto",
-      // Slightly increased stagger timing for smoother mobile flow
       transition: { staggerChildren: 0.06, duration: 0.3, ease: "easeInOut" as const }
     },
     exit: { opacity: 0, height: 0, transition: { duration: 0.2 } }
@@ -71,7 +84,7 @@ export default function Header() {
             : "bg-white border-b border-gray-100 py-2"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
           
           {/* HEADER ROW 1: Branding, Search, Actions */}
           <div className="flex items-center justify-between h-16 md:h-20 gap-4 md:gap-8 transition-all duration-500 ease-in-out">
@@ -79,7 +92,7 @@ export default function Header() {
             {/* Mobile Menu Button & Logo */}
             <div className="flex items-center gap-3 md:gap-4">
               <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                onClick={toggleMobileMenu}
                 className="md:hidden p-2 -ml-2 text-gray-700 hover:bg-gray-100 rounded-full hover:text-blue-600 transition-all active:scale-95"
                 aria-label="Toggle Menu"
               >
@@ -89,7 +102,7 @@ export default function Header() {
               <Link 
                 href="/" 
                 className="relative z-50 text-2xl md:text-3xl font-black tracking-tight hover:scale-[1.02] transition-transform active:scale-95"
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={() => { setIsMobileMenuOpen(false); setIsMobileSearchOpen(false); }}
               >
                 {/* Gradient Text Logo */}
                 <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-800 bg-clip-text text-transparent">
@@ -99,21 +112,23 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Desktop Search Bar (Advanced UI) */}
-            <div className="hidden md:flex flex-1 max-w-2xl relative group">
-              <input 
-                type="text" 
-                placeholder="Search for compatible parts, cookware..." 
-                className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:shadow-[0_0_15px_rgba(37,99,235,0.1)] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:scale-[1.01] block pl-5 pr-12 py-3.5 transition-all duration-300 ease-out"
-              />
-              <button className="absolute right-1 top-1 bottom-1 px-4 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg flex items-center justify-center transition-all active:scale-95">
-                <Search className="w-5 h-5" />
-              </button>
+            {/* Desktop Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-2xl justify-center z-50">
+              <SearchBar />
             </div>
 
             {/* Quick Action Icons */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4 relative z-50">
               
+              {/* Mobile Search Toggle Button */}
+              <button 
+                onClick={toggleMobileSearch}
+                className="md:hidden p-2 text-gray-700 hover:text-blue-600 group transition-colors rounded-xl hover:bg-blue-50/50 active:scale-95"
+                aria-label="Toggle Search"
+              >
+                {isMobileSearchOpen ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
+              </button>
+
               <Link href="/account" className="hidden md:flex flex-col items-center gap-0.5 text-gray-600 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
                 <User className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
                 <span className="text-[10px] font-bold">Sign In</span>
@@ -139,8 +154,22 @@ export default function Header() {
             </div>
           </div>
 
+          {/* MOBILE SEARCH SLIDE-DOWN (Absolute positioning to prevent dropdown clipping) */}
+          <AnimatePresence>
+            {isMobileSearchOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="md:hidden absolute left-0 right-0 top-full bg-white px-4 py-4 border-b border-gray-100 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.1)] z-[100]"
+              >
+                <SearchBar onClose={() => setIsMobileSearchOpen(false)} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* HEADER ROW 2: Desktop Navigation Bar */}
-          {/* Smooth Scroll Shrink via max-height, opacity, and transform */}
           <div 
             className={`hidden md:block overflow-hidden transition-all duration-500 ease-in-out ${
               isScrolled ? "max-h-0 opacity-0 -translate-y-2" : "max-h-16 opacity-100 translate-y-0"
@@ -163,13 +192,11 @@ export default function Header() {
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-900 group-hover:rotate-180"}`} />
                     )}
 
-                    {/* Animated Underline Indicator */}
                     <span className={`absolute bottom-0 left-0 h-[2px] bg-blue-600 transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0 group-hover:w-full'} ${link.isHighlight ? 'bg-red-600' : ''}`} />
                   </Link>
                 );
               })}
               
-              {/* Clickable Location Selector */}
               <div className="ml-auto flex items-center gap-2 text-[11px] font-bold text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50 hover:text-gray-900 cursor-pointer transition-all active:scale-95 group">
                 <MapPin className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
                 Delivering to <span className="text-gray-900 underline decoration-gray-300 group-hover:decoration-gray-900 transition-colors">Kerala</span>
@@ -178,7 +205,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* MOBILE DROPDOWN MENU (Framer Motion Staggered) */}
+        {/* MOBILE DROPDOWN MENU */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -186,24 +213,11 @@ export default function Header() {
               initial="hidden"
               animate="show"
               exit="exit"
-              className="md:hidden bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.1)] overflow-hidden absolute w-full"
+              className="md:hidden bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.1)] overflow-hidden absolute w-full z-40"
             >
-              <div className="px-4 py-6 space-y-4">
+              <div className="px-4 py-4 space-y-4">
                 
-                {/* Mobile Search */}
-                <motion.div variants={mobileItemVariants} className="relative w-full mb-6">
-                  <input 
-                    type="text" 
-                    placeholder="Search compatible parts..." 
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:shadow-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block pl-4 pr-12 py-3.5 transition-all"
-                  />
-                  <button className="absolute right-1 top-1 bottom-1 px-4 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
-                    <Search className="w-5 h-5" />
-                  </button>
-                </motion.div>
-
-                {/* Mobile Links */}
-                <div className="flex flex-col gap-2 pb-6 border-b border-gray-100">
+                <div className="flex flex-col gap-2 pb-6 border-b border-gray-100 mt-2">
                   {navLinks.map((link) => {
                     const isActive = pathname === link.href;
                     return (
@@ -223,7 +237,6 @@ export default function Header() {
                   })}
                 </div>
 
-                {/* Mobile Quick Links */}
                 <motion.div variants={mobileItemVariants} className="flex items-center justify-around pt-2 pb-4 text-gray-600">
                   <Link href="/account" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform">
                     <div className="p-3 bg-gray-50 rounded-full"><User className="w-5 h-5" /></div>
