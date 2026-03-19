@@ -23,7 +23,7 @@ import {
 } from "lucide-react"; 
 import Link from "next/link";
 import { getAllProducts } from "../lib/shopify"; 
-import { useCart } from "../providers/CartProvider"; // Essential for functional cart
+import { useCart } from "../providers/CartProvider";
 
 // Comprehensive Shopify Type for local usage
 interface ShopifyProduct {
@@ -96,7 +96,7 @@ export default function HomePage() {
     // Map Shopify Data to CartProvider Item format
     const cartItem = {
       id: product.id,
-      variantId: product.variants.edges[0]?.node.id, // THE CRITICAL PART FOR CHECKOUT
+      variantId: product.variants.edges[0]?.node.id, 
       title: product.title,
       handle: product.handle,
       price: Number(product.priceRange.maxVariantPrice.amount),
@@ -198,11 +198,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. BRAND SECTION (Uniform Sizing Fix) */}
+      {/* 2. BRAND SECTION */}
       <section className="bg-gray-50/50 py-10 md:py-14 border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-4 text-center">
           
-          {/* Section 1: Auto Compatibility */}
           <div className="mb-10">
             <p className="text-[11px] md:text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 md:mb-8">
               Compatible parts available for leading brands
@@ -222,7 +221,6 @@ export default function HomePage() {
 
           <div className="w-24 h-px bg-gray-200 mx-auto mb-10"></div>
 
-          {/* Section 2: Platforms */}
           <div>
             <p className="text-[11px] md:text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 md:mb-8">
               Available on platforms
@@ -346,7 +344,6 @@ export default function HomePage() {
                 
                 <Link href={`/products/${prod.handle}`} className="relative w-full aspect-square bg-gray-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
                   {imageUrl ? (
-                    {/* CHANGED THIS LINE: object-cover -> object-contain p-4 */}
                     <img src={imageUrl} alt={prod.title} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <ShoppingBag className="w-10 h-10 text-gray-200" />
