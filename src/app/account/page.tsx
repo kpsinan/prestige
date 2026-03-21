@@ -9,7 +9,8 @@ import {
   ShoppingBag, 
   MapPin, 
   Clock, 
-  CheckCircle2 
+  CheckCircle2,
+  XCircle // Added for the canceled icon
 } from "lucide-react";
 
 // Server Action to securely log the user out
@@ -21,19 +22,15 @@ async function logout() {
 }
 
 export default async function AccountPage() {
-  // 1. Await cookies (Next.js 15+ requirement) and get the token
   const cookieStore = await cookies();
   const token = cookieStore.get("customerAccessToken")?.value;
 
-  // 2. If they have no token, kick them back to the login page
   if (!token) {
     redirect("/account/login");
   }
 
-  // 3. Ask Shopify who this token belongs to and get their past orders
   const customer = await getCustomerOrders(token);
 
-  // 4. If the token is expired or invalid, kick them to login
   if (!customer) {
     const cookieStoreToClear = await cookies();
     cookieStoreToClear.delete("customerAccessToken");
@@ -57,7 +54,6 @@ export default async function AccountPage() {
             </p>
           </div>
           
-          {/* Logout Button (Powered by Server Action) */}
           <form action={logout}>
             <button 
               type="submit" 
@@ -70,12 +66,8 @@ export default async function AccountPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
-          {/* ========================================== */}
-          {/* LEFT COLUMN: PROFILE SUMMARY               */}
-          {/* ========================================== */}
+          {/* LEFT COLUMN: PROFILE SUMMARY */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            
-            {/* Profile Card */}
             <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
                 <User className="w-10 h-10" />
@@ -93,32 +85,26 @@ export default async function AccountPage() {
               </div>
             </div>
 
-            {/* Quick Links Card */}
             <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-4 px-2">Quick Actions</h3>
               <div className="flex flex-col gap-2">
                 <Link href="/products" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors group">
                   <ShoppingBag className="w-5 h-5 text-gray-400 group-hover:text-blue-600" /> Continue Shopping
                 </Link>
-                {/* Visual placeholder for future address management */}
-                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors group cursor-pointer">
+                <Link href="/account/addresses" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors group">
                   <MapPin className="w-5 h-5 text-gray-400 group-hover:text-blue-600" /> Saved Addresses
-                </div>
+                </Link>
               </div>
             </div>
-
           </div>
 
-          {/* ========================================== */}
-          {/* RIGHT COLUMN: ORDER HISTORY                */}
-          {/* ========================================== */}
+          {/* RIGHT COLUMN: ORDER HISTORY */}
           <div className="lg:col-span-8">
             <h2 className="text-2xl font-extrabold text-gray-900 mb-6 flex items-center gap-2">
               <Package className="w-6 h-6 text-blue-600" /> Order History
             </h2>
 
             {orders.length === 0 ? (
-              // Empty State
               <div className="bg-white rounded-[2rem] p-12 border border-gray-100 shadow-sm flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
                   <ShoppingBag className="w-10 h-10 text-gray-300" />
@@ -135,7 +121,6 @@ export default async function AccountPage() {
                 </Link>
               </div>
             ) : (
-              // Order List
               <div className="flex flex-col gap-6">
                 {orders.map((orderEdge: any) => {
                   const order = orderEdge.node;
@@ -145,9 +130,14 @@ export default async function AccountPage() {
                   const price = order.totalPrice.amount;
                   const currency = order.totalPrice.currencyCode;
                   
-                  // Status Colors logic
+                  // Status Logic
                   const isPaid = order.financialStatus === "PAID";
                   const isFulfilled = order.fulfillmentStatus === "FULFILLED";
+                  const isCanceled = !!order.canceledAt;
+                  // Make the reason human readable (e.g. "CUSTOMER" -> "Customer")
+                  const cancelReason = order.cancelReason 
+                    ? order.cancelReason.replace(/_/g, ' ').toLowerCase() 
+                    : "admin";
 
                   return (
                     <div key={order.id} className="bg-white rounded-[2rem] p-6 sm:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -156,21 +146,38 @@ export default async function AccountPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
                         <div>
                           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Order Placed</p>
-                          <p className="font-bold text-gray-900">{date}</p>
+                          <p className={`font-bold ${isCanceled ? "text-gray-500 line-through" : "text-gray-900"}`}>{date}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                            {isPaid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                            {isPaid ? "Paid" : "Pending"}
-                          </span>
-                          <span className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isFulfilled ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
-                            {isFulfilled ? "Shipped" : "Processing"}
-                          </span>
+                          {isCanceled ? (
+                            <span className="text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 bg-red-50 text-red-700">
+                              <XCircle className="w-3.5 h-3.5" /> Canceled
+                            </span>
+                          ) : (
+                            <>
+                              <span className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isPaid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                {isPaid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                                {isPaid ? "Paid" : "Pending"}
+                              </span>
+                              <span className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${isFulfilled ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
+                                {isFulfilled ? "Shipped" : "Processing"}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
 
+                      {/* Cancelation Reason Banner */}
+                      {isCanceled && (
+                        <div className="mb-6 -mt-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                          <p className="text-xs font-bold text-red-800">
+                            This order was canceled by {cancelReason}.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Order Items */}
-                      <div className="flex flex-col gap-4 mb-6">
+                      <div className={`flex flex-col gap-4 mb-6 ${isCanceled ? "opacity-60 grayscale" : ""}`}>
                         {order.lineItems.edges.map((itemEdge: any, index: number) => {
                           const item = itemEdge.node;
                           return (
@@ -185,11 +192,11 @@ export default async function AccountPage() {
                       </div>
 
                       {/* Order Footer */}
-                      <div className="flex items-center justify-between pt-6 border-t border-gray-100 bg-gray-50/50 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 px-6 sm:px-8 py-4 sm:py-5 rounded-b-[2rem]">
+                      <div className={`flex items-center justify-between pt-6 border-t border-gray-100 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 px-6 sm:px-8 py-4 sm:py-5 rounded-b-[2rem] ${isCanceled ? "bg-red-50/30" : "bg-gray-50/50"}`}>
                         <p className="text-sm font-bold text-gray-500">
                           Order #{order.orderNumber}
                         </p>
-                        <p className="text-lg font-black text-[#0a2540]">
+                        <p className={`text-lg font-black ${isCanceled ? "text-gray-400 line-through" : "text-[#0a2540]"}`}>
                           {new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(price))}
                         </p>
                       </div>

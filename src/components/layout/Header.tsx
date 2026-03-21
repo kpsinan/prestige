@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image"; 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, 
@@ -23,11 +23,14 @@ export default function Header() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
+  // Authentication & Hydration States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
   const pathname = usePathname();
+  const router = useRouter();
   
+  // Pull cart data dynamically
   const { cartItems, cart } = useCart() as any; 
   const currentCart = cartItems || cart || [];
   const cartCount = currentCart.reduce((total: number, item: any) => total + (item.quantity || 1), 0);
@@ -40,7 +43,7 @@ export default function Header() {
     };
     window.addEventListener("scroll", handleScroll);
 
-    // --- NEW: Dynamic Auth Checker ---
+    // Dynamic Auth Checker
     const checkAuth = () => {
       const value = `; ${document.cookie}`;
       const parts = value.split(`; customerAccessToken=`);
@@ -51,17 +54,17 @@ export default function Header() {
       }
     };
 
-    // 1. Check on load and every time the URL changes
+    // Check on load and every time the URL changes
     checkAuth();
 
-    // 2. Listen for instant login/register events
+    // Listen for instant login/register events from the Auth pages
     window.addEventListener("auth-update", checkAuth);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("auth-update", checkAuth);
     };
-  }, [pathname]); // <-- Adding pathname here ensures it re-checks on navigation
+  }, [pathname]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -97,12 +100,14 @@ export default function Header() {
 
   return (
     <>
+      {/* TOP ANNOUNCEMENT BAR */}
       <div className="bg-blue-900 text-white px-4 py-2 text-center text-[11px] md:text-xs font-medium flex items-center justify-center tracking-wide">
         <span className="text-amber-400 font-extrabold mr-2">SALE:</span> 
         Up to 30% off on compatible auto parts and kitchen essentials. 
         <Link href="/collections/deals" className="underline ml-2 hover:text-blue-200 transition-colors">Shop Now</Link>
       </div>
 
+      {/* MAIN STICKY HEADER */}
       <header 
         className={`sticky top-0 inset-x-0 z-50 transition-all duration-500 ease-in-out ${
           isScrolled 
@@ -112,8 +117,10 @@ export default function Header() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
           
+          {/* HEADER ROW 1: Branding, Search, Actions */}
           <div className="flex items-center justify-between h-16 md:h-20 gap-4 md:gap-8 transition-all duration-500 ease-in-out">
             
+            {/* Mobile Menu Button & Logo */}
             <div className="flex items-center gap-3 md:gap-4">
               <button
                 onClick={toggleMobileMenu}
@@ -139,12 +146,15 @@ export default function Header() {
               </Link>
             </div>
 
+            {/* Desktop Search Bar */}
             <div className="hidden md:flex flex-1 max-w-2xl justify-center z-50">
               <SearchBar />
             </div>
 
+            {/* Quick Action Icons */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4 relative z-50">
               
+              {/* Mobile Search Toggle Button */}
               <button 
                 onClick={toggleMobileSearch}
                 className="md:hidden p-2 text-gray-700 hover:text-blue-600 group transition-colors rounded-xl hover:bg-blue-50/50 active:scale-95"
@@ -153,7 +163,18 @@ export default function Header() {
                 {isMobileSearchOpen ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
               </button>
 
-              <Link href="/account" className="hidden md:flex flex-col items-center gap-0.5 text-gray-600 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
+              {/* Dynamic Account / Sign In Link */}
+              <Link 
+                href={isLoggedIn ? "/account" : "/account/login"}
+                onClick={(e) => {
+                  if (isLoggedIn) {
+                    e.preventDefault();
+                    router.push("/account");
+                    router.refresh(); // Forces fresh order data from Shopify
+                  }
+                }}
+                className="hidden md:flex flex-col items-center gap-0.5 text-gray-600 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95"
+              >
                 <User className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
                 <span className="text-[10px] font-bold">
                   {isMounted ? (isLoggedIn ? "Account" : "Sign In") : "..."}
@@ -165,6 +186,7 @@ export default function Header() {
                 <span className="text-[10px] font-bold">Wishlist</span>
               </Link>
 
+              {/* Enhanced Dynamic Cart Icon */}
               <Link href="/cart" className="flex flex-col items-center gap-0.5 text-gray-700 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
                 <div className="relative">
                   <ShoppingCart className="w-6 h-6 sm:w-6 sm:h-6 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
@@ -180,6 +202,7 @@ export default function Header() {
             </div>
           </div>
 
+          {/* MOBILE SEARCH SLIDE-DOWN */}
           <AnimatePresence>
             {isMobileSearchOpen && (
               <motion.div
@@ -194,6 +217,7 @@ export default function Header() {
             )}
           </AnimatePresence>
 
+          {/* HEADER ROW 2: Desktop Navigation Bar */}
           <div 
             className={`hidden md:block overflow-hidden transition-all duration-500 ease-in-out ${
               isScrolled ? "max-h-0 opacity-0 -translate-y-2" : "max-h-16 opacity-100 translate-y-0"
@@ -229,6 +253,7 @@ export default function Header() {
           </div>
         </div>
 
+        {/* MOBILE DROPDOWN MENU */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -261,7 +286,18 @@ export default function Header() {
                 </div>
 
                 <motion.div variants={mobileItemVariants} className="flex items-center justify-around pt-2 pb-4 text-gray-600">
-                  <Link href="/account" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link 
+                    href={isLoggedIn ? "/account" : "/account/login"} 
+                    onClick={(e) => {
+                      if (isLoggedIn) {
+                        e.preventDefault();
+                        router.push("/account");
+                        router.refresh();
+                      }
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform"
+                  >
                     <div className="p-3 bg-gray-50 rounded-full"><User className="w-5 h-5" /></div>
                     <span className="text-[11px] font-bold">
                       {isMounted ? (isLoggedIn ? "Account" : "Sign In") : "..."}

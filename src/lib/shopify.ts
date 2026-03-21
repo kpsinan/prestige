@@ -230,6 +230,20 @@ export async function getCustomerOrders(accessToken: string) {
         firstName
         lastName
         email
+        addresses(first: 10) {
+          edges {
+            node {
+              id
+              firstName
+              lastName
+              address1
+              city
+              province
+              zip
+              country
+            }
+          }
+        }
         orders(first: 10, sortKey: PROCESSED_AT, reverse: true) {
           edges {
             node {
@@ -238,6 +252,8 @@ export async function getCustomerOrders(accessToken: string) {
               processedAt
               financialStatus
               fulfillmentStatus
+              canceledAt
+              cancelReason
               totalPrice { amount currencyCode }
               lineItems(first: 5) {
                 edges {
@@ -252,4 +268,30 @@ export async function getCustomerOrders(accessToken: string) {
   `;
   const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken } });
   return response.body?.customer;
+}
+
+// --- NEW: Add a New Address ---
+export async function addCustomerAddress(accessToken: string, address: any) {
+  const query = `
+    mutation customerAddressCreate($customerAccessToken: String!, $address: MailingAddressInput!) {
+      customerAddressCreate(customerAccessToken: $customerAccessToken, address: $address) {
+        customerAddress { id }
+        customerUserErrors { message }
+      }
+    }
+  `;
+  const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken, address } });
+  return response.body?.customerAddressCreate;
+}
+
+// --- NEW: Delete an Address ---
+export async function deleteCustomerAddress(accessToken: string, addressId: string) {
+  const query = `
+    mutation customerAddressDelete($customerAccessToken: String!, $id: ID!) {
+      customerAddressDelete(customerAccessToken: $customerAccessToken, id: $id) {
+        deletedCustomerAddressId
+      }
+    }
+  `;
+  await shopifyFetch({ query, variables: { customerAccessToken: accessToken, id: addressId } });
 }
