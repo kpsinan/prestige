@@ -34,9 +34,10 @@ async function shopifyFetch({ query, variables }: { query: string; variables?: a
   }
 }
 
-/**
- * Fetch All Products (Includes Variant IDs for Cart)
- */
+/* ========================================================
+   1. PRODUCTS & COLLECTIONS
+   ======================================================== */
+
 export async function getAllProducts(): Promise<any[]> {
   const query = `
     query getProducts {
@@ -48,40 +49,23 @@ export async function getAllProducts(): Promise<any[]> {
             handle
             availableForSale
             priceRange {
-              maxVariantPrice {
-                amount
-                currencyCode
-              }
+              maxVariantPrice { amount currencyCode }
             }
             images(first: 1) {
-              edges {
-                node {
-                  url
-                  altText
-                }
-              }
+              edges { node { url altText } }
             }
             variants(first: 1) {
-              edges {
-                node {
-                  id
-                  availableForSale
-                }
-              }
+              edges { node { id availableForSale } }
             }
           }
         }
       }
     }
   `;
-
   const response = await shopifyFetch({ query });
   return response.body?.products?.edges.map((edge: any) => edge.node) || [];
 }
 
-/**
- * Fetch a Single Product by Handle (Updated to fetch up to 10 images)
- */
 export async function getProduct(handle: string): Promise<any | null> {
   const query = `
     query getProduct($handle: String!) {
@@ -92,38 +76,21 @@ export async function getProduct(handle: string): Promise<any | null> {
         descriptionHtml
         availableForSale
         priceRange {
-          maxVariantPrice {
-            amount
-            currencyCode
-          }
+          maxVariantPrice { amount currencyCode }
         }
         images(first: 10) {
-          edges {
-            node {
-              url
-              altText
-            }
-          }
+          edges { node { url altText } }
         }
         variants(first: 1) {
-          edges {
-            node {
-              id
-              availableForSale
-            }
-          }
+          edges { node { id availableForSale } }
         }
       }
     }
   `;
-
   const response = await shopifyFetch({ query, variables: { handle } });
   return response.body?.product || null;
 }
 
-/**
- * Fetch Products by Collection Handle
- */
 export async function getCollectionProducts(handle: string): Promise<any[]> {
   const query = `
     query getCollectionProducts($handle: String!) {
@@ -136,25 +103,13 @@ export async function getCollectionProducts(handle: string): Promise<any[]> {
               handle
               availableForSale
               priceRange {
-                maxVariantPrice {
-                  amount
-                  currencyCode
-                }
+                maxVariantPrice { amount currencyCode }
               }
               images(first: 1) {
-                edges {
-                  node {
-                    url
-                    altText
-                  }
-                }
+                edges { node { url altText } }
               }
               variants(first: 1) {
-                edges {
-                  node {
-                    id
-                  }
-                }
+                edges { node { id } }
               }
             }
           }
@@ -162,10 +117,13 @@ export async function getCollectionProducts(handle: string): Promise<any[]> {
       }
     }
   `;
-
   const response = await shopifyFetch({ query, variables: { handle } });
   return response.body?.collection?.products?.edges.map((edge: any) => edge.node) || [];
 }
+
+/* ========================================================
+   2. SEARCH CAPABILITIES
+   ======================================================== */
 
 export async function searchProducts(searchTerm: string): Promise<any[]> {
   const query = `
@@ -178,53 +136,48 @@ export async function searchProducts(searchTerm: string): Promise<any[]> {
             handle
             availableForSale
             priceRange {
-              maxVariantPrice {
-                amount
-                currencyCode
-              }
+              maxVariantPrice { amount currencyCode }
             }
             images(first: 1) {
-              edges {
-                node {
-                  url
-                  altText
-                }
-              }
+              edges { node { url altText } }
             }
           }
         }
       }
     }
   `;
-
-  // Shopify's GraphQL uses the 'query' variable to search titles, descriptions, and tags
   const response = await shopifyFetch({ query, variables: { query: searchTerm } });
   return response.body?.products?.edges.map((edge: any) => edge.node) || [];
 }
 
-/**
- * Create a Checkout URL for Multi-Item Cart
- */
-export async function createCheckout(lines: { merchandiseId: string; quantity: number }[]): Promise<string> {
+/* ========================================================
+   3. CHECKOUT CAPABILITIES
+   ======================================================== */
+
+export async function createCheckout(
+  lines: { merchandiseId: string; quantity: number }[],
+  customerAccessToken?: string // 1. Add this optional token parameter
+): Promise<string> {
   const query = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
-        cart {
-          checkoutUrl
-        }
-        userErrors {
-          field
-          message
-        }
+        cart { checkoutUrl }
+        userErrors { field message }
       }
     }
   `;
 
-  const variables = {
-    input: {
-      lines: lines
-    }
-  };
+  // 2. Build the input object
+  const input: any = { lines: lines };
+
+  // 3. IF the user is logged in, attach their account to this checkout!
+  if (customerAccessToken) {
+    input.buyerIdentity = {
+      customerAccessToken: customerAccessToken
+    };
+  }
+
+  const variables = { input };
 
   const response = await shopifyFetch({ query, variables });
   const checkoutUrl = response.body?.cartCreate?.cart?.checkoutUrl;
@@ -236,4 +189,67 @@ export async function createCheckout(lines: { merchandiseId: string; quantity: n
   }
 
   return checkoutUrl;
+}
+
+/* ========================================================
+   4. CUSTOMER ACCOUNTS (LOGIN, REGISTER, HISTORY)
+   ======================================================== */
+
+export async function createCustomer(email: string, password: string, firstName: string, lastName: string) {
+  const query = `
+    mutation customerCreate($input: CustomerCreateInput!) {
+      customerCreate(input: $input) {
+        customer { id }
+        customerUserErrors { code field message }
+      }
+    }
+  `;
+  const variables = { input: { email, password, firstName, lastName } };
+  const response = await shopifyFetch({ query, variables });
+  return response.body?.customerCreate;
+}
+
+export async function loginCustomer(email: string, password: string) {
+  const query = `
+    mutation customerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
+      customerAccessTokenCreate(input: $input) {
+        customerAccessToken { accessToken expiresAt }
+        customerUserErrors { code field message }
+      }
+    }
+  `;
+  const variables = { input: { email, password } };
+  const response = await shopifyFetch({ query, variables });
+  return response.body?.customerAccessTokenCreate;
+}
+
+export async function getCustomerOrders(accessToken: string) {
+  const query = `
+    query getCustomer($customerAccessToken: String!) {
+      customer(customerAccessToken: $customerAccessToken) {
+        firstName
+        lastName
+        email
+        orders(first: 10, sortKey: PROCESSED_AT, reverse: true) {
+          edges {
+            node {
+              id
+              orderNumber
+              processedAt
+              financialStatus
+              fulfillmentStatus
+              totalPrice { amount currencyCode }
+              lineItems(first: 5) {
+                edges {
+                  node { title quantity }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken } });
+  return response.body?.customer;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image"; // Added for logo support
+import Image from "next/image"; 
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -16,24 +16,53 @@ import {
   ChevronDown
 } from "lucide-react";
 import SearchBar from "../SearchBar";
+import { useCart } from "../../providers/CartProvider";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
   const pathname = usePathname();
+  
+  const { cartItems, cart } = useCart() as any; 
+  const currentCart = cartItems || cart || [];
+  const cartCount = currentCart.reduce((total: number, item: any) => total + (item.quantity || 1), 0);
 
-  // Track scroll position for shrinking/glassmorphism effect
   useEffect(() => {
+    setIsMounted(true);
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 30);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
-  // Handlers to prevent menu and search from being open at the same time
+    // --- NEW: Dynamic Auth Checker ---
+    const checkAuth = () => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; customerAccessToken=`);
+      if (parts.length === 2) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
+    };
+
+    // 1. Check on load and every time the URL changes
+    checkAuth();
+
+    // 2. Listen for instant login/register events
+    window.addEventListener("auth-update", checkAuth);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("auth-update", checkAuth);
+    };
+  }, [pathname]); // <-- Adding pathname here ensures it re-checks on navigation
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
     setIsMobileSearchOpen(false);
@@ -44,7 +73,6 @@ export default function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  // E-commerce Navigation Links
   const navLinks = [
     { name: "Home", href: "/", hasDropdown: false },
     { name: "Auto Parts", href: "/collections/auto-parts", hasDropdown: true },
@@ -52,7 +80,6 @@ export default function Header() {
     { name: "Today's Deals", href: "/collections/deals", hasDropdown: false, isHighlight: true },
   ];
 
-  // Framer Motion Variants
   const mobileMenuVariants = {
     hidden: { opacity: 0, height: 0 },
     show: { 
@@ -70,14 +97,12 @@ export default function Header() {
 
   return (
     <>
-      {/* TOP ANNOUNCEMENT BAR */}
       <div className="bg-blue-900 text-white px-4 py-2 text-center text-[11px] md:text-xs font-medium flex items-center justify-center tracking-wide">
         <span className="text-amber-400 font-extrabold mr-2">SALE:</span> 
         Up to 30% off on compatible auto parts and kitchen essentials. 
         <Link href="/collections/deals" className="underline ml-2 hover:text-blue-200 transition-colors">Shop Now</Link>
       </div>
 
-      {/* MAIN STICKY HEADER */}
       <header 
         className={`sticky top-0 inset-x-0 z-50 transition-all duration-500 ease-in-out ${
           isScrolled 
@@ -87,10 +112,8 @@ export default function Header() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
           
-          {/* HEADER ROW 1: Branding, Search, Actions */}
           <div className="flex items-center justify-between h-16 md:h-20 gap-4 md:gap-8 transition-all duration-500 ease-in-out">
             
-            {/* Mobile Menu Button & Logo */}
             <div className="flex items-center gap-3 md:gap-4">
               <button
                 onClick={toggleMobileMenu}
@@ -105,27 +128,23 @@ export default function Header() {
                 className="relative z-50 flex items-center transition-transform hover:scale-[1.02] active:scale-95"
                 onClick={() => { setIsMobileMenuOpen(false); setIsMobileSearchOpen(false); }}
               >
-                {/* Logo Image instead of Text */}
-<Image 
-  src="/logo.svg" 
-  alt="Prestige Logo" 
-  width={200} // Increased base width for better resolution
-  height={60} // Increased base height
-  className="h-12 md:h-16 w-auto object-contain" // Adjusted Tailwind classes
-  priority
-/>
+                <Image 
+                  src="/logo.svg" 
+                  alt="Prestige Logo" 
+                  width={200} 
+                  height={60} 
+                  className="h-12 md:h-16 w-auto object-contain" 
+                  priority
+                />
               </Link>
             </div>
 
-            {/* Desktop Search Bar */}
             <div className="hidden md:flex flex-1 max-w-2xl justify-center z-50">
               <SearchBar />
             </div>
 
-            {/* Quick Action Icons */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4 relative z-50">
               
-              {/* Mobile Search Toggle Button */}
               <button 
                 onClick={toggleMobileSearch}
                 className="md:hidden p-2 text-gray-700 hover:text-blue-600 group transition-colors rounded-xl hover:bg-blue-50/50 active:scale-95"
@@ -136,7 +155,9 @@ export default function Header() {
 
               <Link href="/account" className="hidden md:flex flex-col items-center gap-0.5 text-gray-600 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
                 <User className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                <span className="text-[10px] font-bold">Sign In</span>
+                <span className="text-[10px] font-bold">
+                  {isMounted ? (isLoggedIn ? "Account" : "Sign In") : "..."}
+                </span>
               </Link>
 
               <Link href="/wishlist" className="hidden md:flex flex-col items-center gap-0.5 text-gray-600 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
@@ -144,22 +165,21 @@ export default function Header() {
                 <span className="text-[10px] font-bold">Wishlist</span>
               </Link>
 
-              {/* Enhanced Cart Icon */}
               <Link href="/cart" className="flex flex-col items-center gap-0.5 text-gray-700 hover:text-blue-600 group transition-colors p-2 rounded-xl hover:bg-blue-50/50 active:scale-95">
                 <div className="relative">
                   <ShoppingCart className="w-6 h-6 sm:w-6 sm:h-6 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
                   
-                  {/* Static Prominent Cart Badge */}
-                  <span className="absolute -top-2 -right-2.5 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">
-                    2
-                  </span>
+                  {isMounted && cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2.5 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">
+                      {cartCount}
+                    </span>
+                  )}
                 </div>
                 <span className="text-[10px] font-bold hidden md:block mt-0.5">Cart</span>
               </Link>
             </div>
           </div>
 
-          {/* MOBILE SEARCH SLIDE-DOWN */}
           <AnimatePresence>
             {isMobileSearchOpen && (
               <motion.div
@@ -174,7 +194,6 @@ export default function Header() {
             )}
           </AnimatePresence>
 
-          {/* HEADER ROW 2: Desktop Navigation Bar */}
           <div 
             className={`hidden md:block overflow-hidden transition-all duration-500 ease-in-out ${
               isScrolled ? "max-h-0 opacity-0 -translate-y-2" : "max-h-16 opacity-100 translate-y-0"
@@ -210,7 +229,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* MOBILE DROPDOWN MENU */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -243,11 +261,13 @@ export default function Header() {
                 </div>
 
                 <motion.div variants={mobileItemVariants} className="flex items-center justify-around pt-2 pb-4 text-gray-600">
-                  <Link href="/account" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform">
+                  <Link href="/account" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="p-3 bg-gray-50 rounded-full"><User className="w-5 h-5" /></div>
-                    <span className="text-[11px] font-bold">Account</span>
+                    <span className="text-[11px] font-bold">
+                      {isMounted ? (isLoggedIn ? "Account" : "Sign In") : "..."}
+                    </span>
                   </Link>
-                  <Link href="/wishlist" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform">
+                  <Link href="/wishlist" className="flex flex-col items-center gap-1.5 hover:text-blue-600 active:scale-95 transition-transform" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="p-3 bg-gray-50 rounded-full"><Heart className="w-5 h-5" /></div>
                     <span className="text-[11px] font-bold">Wishlist</span>
                   </Link>

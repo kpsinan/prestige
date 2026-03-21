@@ -75,7 +75,22 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
   const handleBuyNow = async () => {
     setIsBuying(true);
     try {
-      const checkoutUrl = await createCheckout([{ merchandiseId: variantId, quantity: isInCart ? currentQty : 1 }]);
+      // 1. Check the browser cookies to see if they are logged in
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return undefined;
+      };
+      
+      const token = getCookie("customerAccessToken");
+
+      // 2. Pass the token to Shopify when creating the checkout
+      const checkoutUrl = await createCheckout(
+        [{ merchandiseId: variantId, quantity: isInCart ? currentQty : 1 }], 
+        token
+      );
+      
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error("Checkout failed", error);
