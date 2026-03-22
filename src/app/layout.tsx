@@ -3,8 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
-import {CartProvider} from "../providers/CartProvider";
+import { CartProvider } from "../providers/CartProvider";
 import ShutterEffect from '../components/ui/ShutterEffect'; 
+import ReferralTracker from "../components/ReferralTracker"; // NEW: Imports the tracker
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,6 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-white text-black antialiased`}>
+        {/* Silently catches any ?ref= links and saves them */}
+        <ReferralTracker /> 
+        
         <ShutterEffect />
         <CartProvider>
           <Header />

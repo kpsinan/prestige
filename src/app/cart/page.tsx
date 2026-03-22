@@ -7,7 +7,8 @@ import { createCheckout, getCustomerAddressesOnly } from "../../lib/shopify";
 import { Trash2, Plus, Minus, ArrowRight, MapPin, Loader2, ShoppingBag, ShieldCheck } from "lucide-react";
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, updateQuantity } = useCart() as any;
+  // ADDED clearCart here so we can empty the cart on checkout
+  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart() as any;
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   
   // Auth & Address State
@@ -49,8 +50,22 @@ export default function CartPage() {
       // Grab the address they selected from the dropdown
       const chosenAddress = addresses.length > 0 ? addresses[selectedAddressIndex] : undefined;
 
-      // Pass the items, the user token, AND the chosen address to Shopify
-      const checkoutUrl = await createCheckout(lines, token, chosenAddress);
+      // 1. Get the referral cookie if it exists
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return undefined;
+      };
+      const referralCode = getCookie("referral_code");
+
+      // 2. Pass everything to Shopify
+      const checkoutUrl = await createCheckout(lines, token, chosenAddress, referralCode);
+      
+      // 3. IMPORTANT: Clear the cart locally BEFORE they leave the site
+      clearCart();
+
+      // 4. Send them to Shopify
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error("Checkout Error:", error);
@@ -92,9 +107,7 @@ export default function CartPage() {
 
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
           
-          {/* ========================================== */}
-          {/* LEFT: CART ITEMS LIST                      */}
-          {/* ========================================== */}
+          {/* LEFT: CART ITEMS LIST */}
           <div className="w-full lg:w-2/3 flex flex-col gap-4">
             {items.map((item: any) => (
               <div key={item.variantId} className="bg-white rounded-[2rem] p-4 sm:p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -154,9 +167,7 @@ export default function CartPage() {
             ))}
           </div>
 
-          {/* ========================================== */}
-          {/* RIGHT: ORDER SUMMARY & ADDRESS INJECTION   */}
-          {/* ========================================== */}
+          {/* RIGHT: ORDER SUMMARY & ADDRESS INJECTION */}
           <div className="w-full lg:w-1/3 bg-white rounded-[2rem] p-6 sm:p-8 border border-gray-100 shadow-sm lg:sticky top-28">
             <h2 className="text-xl font-extrabold text-gray-900 mb-6">Order Summary</h2>
             
@@ -176,7 +187,7 @@ export default function CartPage() {
               </span>
             </div>
 
-            {/* Address Selection Dropdown (Only shows if logged in with saved addresses) */}
+            {/* Address Selection Dropdown */}
             {token && addresses.length > 0 && (
               <div className="mb-6 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
                 <label className="flex items-center gap-2 text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">
@@ -196,7 +207,7 @@ export default function CartPage() {
               </div>
             )}
 
-            {/* Login Nudge (If not logged in) */}
+            {/* Login Nudge */}
             {!token && (
               <div className="mb-6 text-center">
                 <p className="text-xs text-gray-500 mb-2">Want to track your order and checkout faster?</p>

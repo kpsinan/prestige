@@ -2,6 +2,7 @@ import { getProduct } from "../../../lib/shopify";
 import { notFound } from "next/navigation";
 import AddToCart from "../../../components/AddToCart";
 import ProductGallery from "../../../components/ProductGallery"; 
+import PremiumShareButton from "../../../components/PremiumShareButton"; // <-- Imported the new VIP share button
 
 export default async function ProductPage({
   params,
@@ -67,6 +68,9 @@ export default async function ProductPage({
                 variantId={variantId} 
                 availableForSale={product.availableForSale} 
               />
+              
+              {/* --- INJECTED THE PREMIUM SHARE BUTTON HERE --- */}
+              <PremiumShareButton productHandle={product.handle} />
             </div>
 
             <hr className="border-gray-100 mb-8" />

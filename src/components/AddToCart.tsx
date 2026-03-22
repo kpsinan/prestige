@@ -76,7 +76,6 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
   const handleBuyNow = async () => {
     setIsBuying(true);
     try {
-      // 1. Check the browser cookies to see if they are logged in
       const getCookie = (name: string) => {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -85,25 +84,29 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
       };
       
       const token = getCookie("customerAccessToken");
+      
+      // --- 1. NEW: Grab the referral code ---
+      const referralCode = getCookie("referral_code"); 
+
       let defaultAddress = undefined;
 
-      // 2. If logged in, quickly fetch their saved addresses
       if (token) {
         try {
           const addresses = await getCustomerAddressesOnly(token);
           if (addresses && addresses.length > 0) {
-            defaultAddress = addresses[0]; // Use the first saved address
+            defaultAddress = addresses[0]; 
           }
         } catch (err) {
           console.error("Failed to fetch address", err);
         }
       }
 
-      // 3. Pass the token and the default address to Shopify
+      // --- 2. NEW: Pass referralCode as the 4th argument ---
       const checkoutUrl = await createCheckout(
         [{ merchandiseId: variantId, quantity: isInCart ? currentQty : 1 }], 
         token,
-        defaultAddress
+        defaultAddress,
+        referralCode 
       );
       
       window.location.href = checkoutUrl;

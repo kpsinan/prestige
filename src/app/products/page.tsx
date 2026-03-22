@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default async function ProductsPage() {
-  // 1. Fetch ALL products (No handle needed here!)
+  // 1. Fetch ALL products
   const products = await getAllProducts();
 
   return (
@@ -19,7 +19,7 @@ export default async function ProductsPage() {
           </p>
         </div>
 
-        {/* 2. Responsive Product Grid */}
+        {/* Responsive Product Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {products.map((product) => {
             const price = product.priceRange.maxVariantPrice.amount;

@@ -181,7 +181,8 @@ export async function getCustomerAddressesOnly(accessToken: string) {
 export async function createCheckout(
   lines: { merchandiseId: string; quantity: number }[],
   customerAccessToken?: string,
-  shippingAddress?: any // <--- NEW: Accepts the chosen address
+  shippingAddress?: any,
+  referralCode?: string // <--- NEW: Accepts the referral cookie!
 ): Promise<string> {
   const query = `
     mutation cartCreate($input: CartInput!) {
@@ -194,12 +195,17 @@ export async function createCheckout(
 
   const input: any = { lines: lines };
 
+  // --- NEW: INJECT THE AFFILIATE TRACKER ---
+  if (referralCode) {
+    input.attributes = [{ key: "Referred_By", value: referralCode }];
+  }
+
   if (customerAccessToken) {
     input.buyerIdentity = {
       customerAccessToken: customerAccessToken
     };
     
-    // --- NEW: INJECT THE ADDRESS FOR CASHFREE / SHOP PAY ---
+    // INJECT THE ADDRESS FOR CASHFREE / SHOP PAY
     if (shippingAddress) {
       input.buyerIdentity.deliveryAddressPreferences = [{
         deliveryAddress: {
@@ -264,6 +270,7 @@ export async function getCustomerOrders(accessToken: string) {
   const query = `
     query getCustomer($customerAccessToken: String!) {
       customer(customerAccessToken: $customerAccessToken) {
+        id  # <--- NEW: We need this to generate the "?ref=" sharing link!
         firstName
         lastName
         email
@@ -288,7 +295,6 @@ export async function getCustomerOrders(accessToken: string) {
                   node { 
                     title 
                     quantity 
-                    # --- NEW: Fetch Image & Product URL Handle ---
                     variant {
                       image { url }
                       product { handle }
@@ -305,7 +311,7 @@ export async function getCustomerOrders(accessToken: string) {
   const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken } });
   return response.body?.customer;
 }
-// --- NEW: Add a New Address ---
+
 export async function addCustomerAddress(accessToken: string, address: any) {
   const query = `
     mutation customerAddressCreate($customerAccessToken: String!, $address: MailingAddressInput!) {
@@ -319,7 +325,6 @@ export async function addCustomerAddress(accessToken: string, address: any) {
   return response.body?.customerAddressCreate;
 }
 
-// --- NEW: Delete an Address ---
 export async function deleteCustomerAddress(accessToken: string, addressId: string) {
   const query = `
     mutation customerAddressDelete($customerAccessToken: String!, $id: ID!) {
