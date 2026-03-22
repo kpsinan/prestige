@@ -20,32 +20,32 @@ async function adminGraphql(query: string, variables: any = {}) {
 
 export async function POST(req: Request) {
   console.log("--------------------------------------------------");
-  console.log("🚀 [REFERRAL SYSTEM] Webhook Received");
+  console.log("🚀 [REFERRAL SYSTEM] Webhook Signal Received");
 
   try {
     const order = await req.json();
     const orderNumber = order.order_number;
-    const status = order.fulfillment_status; // 'fulfilled' or null
+    const isNowFulfilled = order.fulfillment_status === 'fulfilled';
 
-    console.log(`📦 Order: #${orderNumber} | Status: ${status || 'unfulfilled'}`);
+    console.log(`📦 Order: #${orderNumber} | Current Status: ${order.fulfillment_status || 'unfulfilled'}`);
 
-    // 1. Extract Referrer
+    // 1. Identify the Referrer
     const refAttribute = order.note_attributes?.find((attr: any) => attr.name === 'Referred_By') 
                       || order.custom_attributes?.find((attr: any) => attr.name === 'Referred_By');
 
     if (!refAttribute?.value) {
-      console.log("ℹ️ Skipping: No referral tag.");
-      return NextResponse.json({ message: 'No referral' }, { status: 200 });
+      console.log("ℹ️ Skipping: No referral tag found.");
+      return NextResponse.json({ message: 'No referral' });
     }
 
     const referrerId = refAttribute.value;
     const globalCustomerId = `gid://shopify/Customer/${referrerId}`;
 
-    // 2. Calculate Amount
+    // 2. Calculate 1%
     const subtotal = parseFloat(order.current_subtotal_price || "0");
-    const earning = parseFloat((subtotal * 0.01).toFixed(2));
+    const earningAmount = parseFloat((subtotal * 0.01).toFixed(2));
 
-    // 3. Fetch current wallet data
+    // 3. Fetch current Customer Wallet
     const getMetaQuery = `
       query getCustomer($id: ID!) {
         customer(id: $id) {
@@ -55,62 +55,57 @@ export async function POST(req: Request) {
       }
     `;
     const customerFetch = await adminGraphql(getMetaQuery, { id: globalCustomerId });
-    
-    if (customerFetch.errors) throw new Error("Shopify Auth Error");
+    if (customerFetch.errors) throw new Error("Shopify API Auth Failed");
 
     let currentBalance = parseFloat(customerFetch.data?.customer?.balance?.value || "0");
-    let ledgerHistory = [];
+    let ledger = [];
     try {
       if (customerFetch.data?.customer?.ledger?.value) {
-        ledgerHistory = JSON.parse(customerFetch.data.customer.ledger.value);
+        ledger = JSON.parse(customerFetch.data.customer.ledger.value);
       }
-    } catch (e) { ledgerHistory = []; }
+    } catch (e) { ledger = []; }
 
-    // 4. LOGIC BRANCHING: FULFILL vs UNFULFILL
-    const hasBeenPaid = ledgerHistory.some((entry: any) => 
-      entry.reason.includes(`#${orderNumber}`) && !entry.reason.includes("REVERSED")
-    );
-    const hasBeenReversed = ledgerHistory.some((entry: any) => 
-      entry.reason.includes(`REVERSED: Order #${orderNumber}`)
-    );
+    // 4. CHECK HISTORY: Has this specific order been paid or reversed?
+    const paymentEntryIndex = ledger.findIndex((e: any) => e.reason === `Commission for Order #${orderNumber}`);
+    const reversalEntryIndex = ledger.findIndex((e: any) => e.reason === `REVERSED: Order #${orderNumber} unfulfilled`);
 
     let newBalance = currentBalance;
-    let actionTaken = false;
+    let changeMade = false;
 
-    if (status === 'fulfilled') {
-      // ONLY PAY IF NOT ALREADY PAID (OR IF PREVIOUSLY REVERSED)
-      if (!hasBeenPaid || (hasBeenPaid && hasBeenReversed)) {
-        newBalance = currentBalance + earning;
-        ledgerHistory.push({
+    // --- CASE A: ADMIN FULFILLED THE ORDER ---
+    if (isNowFulfilled) {
+      // Only pay if they haven't been paid OR if the last action was a reversal
+      if (paymentEntryIndex === -1 || (paymentEntryIndex !== -1 && reversalEntryIndex > paymentEntryIndex)) {
+        newBalance = currentBalance + earningAmount;
+        ledger.push({
           date: new Date().toISOString(),
-          amount: earning.toFixed(2),
+          amount: earningAmount.toFixed(2),
           reason: `Commission for Order #${orderNumber}`
         });
-        console.log(`💰 CREDIT: +₹${earning} added.`);
-        actionTaken = true;
+        console.log(`✅ CREDITED: +₹${earningAmount} added to balance.`);
+        changeMade = true;
       } else {
-        console.log("ℹ️ Skipping: Order already credited in ledger.");
+        console.log("ℹ️ Info: Customer already credited for this order.");
       }
     } 
-    else if (status === null || status === 'restocked') {
-      // ONLY REVERSE IF IT WAS PREVIOUSLY PAID AND NOT YET REVERSED
-      if (hasBeenPaid && !hasBeenReversed) {
-        newBalance = Math.max(0, currentBalance - earning); // Don't go below 0
-        ledgerHistory.push({
+    // --- CASE B: ADMIN UNFULFILLED / CANCELED ---
+    else {
+      // Only reverse if they HAVE been paid and we haven't reversed it yet
+      if (paymentEntryIndex !== -1 && (reversalEntryIndex === -1 || reversalEntryIndex < paymentEntryIndex)) {
+        newBalance = Math.max(0, currentBalance - earningAmount);
+        ledger.push({
           date: new Date().toISOString(),
-          amount: `-${earning.toFixed(2)}`,
+          amount: `-${earningAmount.toFixed(2)}`,
           reason: `REVERSED: Order #${orderNumber} unfulfilled`
         });
-        console.log(`📉 REVERSAL: -₹${earning} deducted.`);
-        actionTaken = true;
+        console.log(`📉 REVERSED: -₹${earningAmount} removed from balance.`);
+        changeMade = true;
       } else {
-        console.log("ℹ️ Skipping: Nothing to reverse.");
+        console.log("ℹ️ Info: Nothing to reverse.");
       }
     }
 
-    if (!actionTaken) {
-      return NextResponse.json({ message: 'No action required' });
-    }
+    if (!changeMade) return NextResponse.json({ message: 'No balance change needed' });
 
     // 5. Update Shopify
     const updateMutation = `
@@ -124,15 +119,15 @@ export async function POST(req: Request) {
     await adminGraphql(updateMutation, {
       metafields: [
         { ownerId: globalCustomerId, namespace: "custom", key: "affiliate_balance", type: "number_decimal", value: newBalance.toFixed(2) },
-        { ownerId: globalCustomerId, namespace: "custom", key: "affiliate_ledger", type: "json", value: JSON.stringify(ledgerHistory) }
+        { ownerId: globalCustomerId, namespace: "custom", key: "affiliate_ledger", type: "json", value: JSON.stringify(ledger) }
       ]
     });
 
-    console.log(`✅ Final Balance: ₹${newBalance.toFixed(2)}`);
-    return NextResponse.json({ success: true, balance: newBalance });
+    console.log(`🏁 Process Complete. New Balance: ₹${newBalance.toFixed(2)}`);
+    return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error("🔥 ERROR:", error.message);
+    console.error("🔥 Webhook Error:", error.message);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }
