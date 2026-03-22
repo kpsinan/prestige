@@ -177,15 +177,54 @@ export default async function AccountPage() {
                       )}
 
                       {/* Order Items */}
+                      {/* Order Items */}
                       <div className={`flex flex-col gap-4 mb-6 ${isCanceled ? "opacity-60 grayscale" : ""}`}>
                         {order.lineItems.edges.map((itemEdge: any, index: number) => {
                           const item = itemEdge.node;
+                          
+                          // Safely extract the image and product link (in case a product was deleted from Shopify)
+                          const imageUrl = item.variant?.image?.url;
+                          const productHandle = item.variant?.product?.handle;
+
                           return (
-                            <div key={index} className="flex items-center justify-between gap-4">
-                              <p className="text-sm font-medium text-gray-900 flex-grow truncate">
-                                <span className="text-gray-400 mr-2">{item.quantity}x</span>
-                                {item.title}
-                              </p>
+                            <div key={index} className="flex items-center gap-4 group">
+                              
+                              {/* 1. Product Image / Link */}
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden shrink-0 relative flex items-center justify-center">
+                                {productHandle ? (
+                                  <Link href={`/products/${productHandle}`} className="absolute inset-0 z-10" />
+                                ) : null}
+                                
+                                {imageUrl ? (
+                                  <img 
+                                    src={imageUrl} 
+                                    alt={item.title} 
+                                    className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500" 
+                                  />
+                                ) : (
+                                  <ShoppingBag className="w-6 h-6 text-gray-300" />
+                                )}
+                              </div>
+
+                              {/* 2. Product Title & Details */}
+                              <div className="flex flex-col flex-grow min-w-0">
+                                {productHandle ? (
+                                  <Link 
+                                    href={`/products/${productHandle}`} 
+                                    className="text-sm sm:text-base font-bold text-gray-900 hover:text-blue-600 line-clamp-2 transition-colors"
+                                  >
+                                    {item.title}
+                                  </Link>
+                                ) : (
+                                  <span className="text-sm sm:text-base font-bold text-gray-900 line-clamp-2">
+                                    {item.title}
+                                  </span>
+                                )}
+                                <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium">
+                                  Qty: <span className="text-gray-900">{item.quantity}</span>
+                                </p>
+                              </div>
+                              
                             </div>
                           );
                         })}

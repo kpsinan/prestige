@@ -161,7 +161,7 @@ export default function HomePage() {
                 href="/products"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all duration-300"
               >
-                Shop Collection <ArrowRight className="w-4 h-4" />
+                Product Gallery! <ArrowRight className="w-4 h-4" />
               </Link>
               <Link 
                 href="#categories"
@@ -271,15 +271,27 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <Link href="/collections/auto-parts" className="group flex flex-col justify-between p-8 rounded-3xl bg-blue-50/50 hover:bg-white shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center mb-6 text-blue-600 group-hover:scale-110 transition-transform">
+          <Link 
+          href="/collections/auto-parts" 
+          className="group relative p-8 md:p-10 rounded-3xl bg-slate-900 text-white overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+        >
+          <img 
+            src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=800&auto=format&fit=crop" 
+            alt="Auto Parts" 
+            className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-overlay group-hover:scale-105 transition-transform duration-700" 
+          />
+          <div className="relative z-10 flex flex-col h-full justify-between min-h-[220px]">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 text-white">
               <Car className="w-7 h-7" />
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-1 text-gray-900">Auto Spare Parts</h3>
-              <p className="text-gray-500 text-sm">Quality compatible parts for Toyota, Suzuki & Mahindra.</p>
+              <h3 className="text-2xl md:text-2xl font-bold mb-2">Auto Spare Parts</h3>
+              <p className="text-slate-300 text-sm font-medium">
+                Quality compatible parts for Toyota, Suzuki & Mahindra.
+              </p>
             </div>
-          </Link>
+          </div>
+        </Link>
         </div>
       </section>
 

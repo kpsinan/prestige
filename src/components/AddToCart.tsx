@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createCheckout } from "../lib/shopify";
+// Added getCustomerAddressesOnly to the import
+import { createCheckout, getCustomerAddressesOnly } from "../lib/shopify";
 import { useCart } from "../providers/CartProvider";
 import { ShoppingCart, Zap, Loader2, Plus, Minus, CheckCircle2, X, ShieldCheck, ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -26,7 +27,7 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
   const productImageUrl = product.images?.edges[0]?.node?.url || "";
   const formattedPrice = new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
 
-  const cartItem = cartItems.find(item => item.variantId === variantId);
+  const cartItem = cartItems.find((item: any) => item.variantId === variantId);
   const isInCart = !!cartItem;
   const currentQty = cartItem?.quantity || 0;
 
@@ -84,11 +85,25 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
       };
       
       const token = getCookie("customerAccessToken");
+      let defaultAddress = undefined;
 
-      // 2. Pass the token to Shopify when creating the checkout
+      // 2. If logged in, quickly fetch their saved addresses
+      if (token) {
+        try {
+          const addresses = await getCustomerAddressesOnly(token);
+          if (addresses && addresses.length > 0) {
+            defaultAddress = addresses[0]; // Use the first saved address
+          }
+        } catch (err) {
+          console.error("Failed to fetch address", err);
+        }
+      }
+
+      // 3. Pass the token and the default address to Shopify
       const checkoutUrl = await createCheckout(
         [{ merchandiseId: variantId, quantity: isInCart ? currentQty : 1 }], 
-        token
+        token,
+        defaultAddress
       );
       
       window.location.href = checkoutUrl;
@@ -163,14 +178,12 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
         </div>
       </div>
 
- 
-
       {/* ========================================================
         2. ENHANCED TOAST (High Contrast CTA)
         ========================================================
       */}
       {showSuccessToast && (
-        <div className="fixed bottom-32 md:bottom-10 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-[400px] z-[150] bg-gray-900 text-white rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-[140px] md:bottom-10 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-[400px] z-[150] bg-gray-900 text-white rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className="p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
@@ -207,7 +220,6 @@ export default function AddToCart({ product, variantId, availableForSale }: AddT
             onClick={() => setIsModalOpen(false)} 
           />
           
-          {/* Scrollable Container for short screens */}
           <div className="relative w-full md:max-w-md bg-white rounded-t-[2rem] md:rounded-[2rem] p-5 sm:p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-6 shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-[100%] md:slide-in-from-bottom-0 md:zoom-in-95 duration-400 ease-out flex flex-col max-h-[90vh] overflow-y-auto">
             
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5 md:hidden shrink-0" />

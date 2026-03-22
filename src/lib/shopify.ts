@@ -150,13 +150,38 @@ export async function searchProducts(searchTerm: string): Promise<any[]> {
   return response.body?.products?.edges.map((edge: any) => edge.node) || [];
 }
 
+export async function getCustomerAddressesOnly(accessToken: string) {
+  const query = `
+    query getCustomerAddresses($customerAccessToken: String!) {
+      customer(customerAccessToken: $customerAccessToken) {
+        addresses(first: 10) {
+          edges {
+            node {
+              firstName
+              lastName
+              address1
+              city
+              province
+              zip
+              country
+            }
+          }
+        }
+      }
+    }
+  `;
+  const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken } });
+  return response.body?.customer?.addresses?.edges.map((edge: any) => edge.node) || [];
+}
+
 /* ========================================================
    3. CHECKOUT CAPABILITIES
    ======================================================== */
 
 export async function createCheckout(
   lines: { merchandiseId: string; quantity: number }[],
-  customerAccessToken?: string // 1. Add this optional token parameter
+  customerAccessToken?: string,
+  shippingAddress?: any // <--- NEW: Accepts the chosen address
 ): Promise<string> {
   const query = `
     mutation cartCreate($input: CartInput!) {
@@ -167,18 +192,30 @@ export async function createCheckout(
     }
   `;
 
-  // 2. Build the input object
   const input: any = { lines: lines };
 
-  // 3. IF the user is logged in, attach their account to this checkout!
   if (customerAccessToken) {
     input.buyerIdentity = {
       customerAccessToken: customerAccessToken
     };
+    
+    // --- NEW: INJECT THE ADDRESS FOR CASHFREE / SHOP PAY ---
+    if (shippingAddress) {
+      input.buyerIdentity.deliveryAddressPreferences = [{
+        deliveryAddress: {
+          address1: shippingAddress.address1,
+          city: shippingAddress.city,
+          province: shippingAddress.province,
+          country: shippingAddress.country || "India",
+          zip: shippingAddress.zip,
+          firstName: shippingAddress.firstName,
+          lastName: shippingAddress.lastName
+        }
+      }];
+    }
   }
 
   const variables = { input };
-
   const response = await shopifyFetch({ query, variables });
   const checkoutUrl = response.body?.cartCreate?.cart?.checkoutUrl;
   
@@ -232,16 +269,7 @@ export async function getCustomerOrders(accessToken: string) {
         email
         addresses(first: 10) {
           edges {
-            node {
-              id
-              firstName
-              lastName
-              address1
-              city
-              province
-              zip
-              country
-            }
+            node { id firstName lastName address1 city province zip country }
           }
         }
         orders(first: 10, sortKey: PROCESSED_AT, reverse: true) {
@@ -257,7 +285,15 @@ export async function getCustomerOrders(accessToken: string) {
               totalPrice { amount currencyCode }
               lineItems(first: 5) {
                 edges {
-                  node { title quantity }
+                  node { 
+                    title 
+                    quantity 
+                    # --- NEW: Fetch Image & Product URL Handle ---
+                    variant {
+                      image { url }
+                      product { handle }
+                    }
+                  }
                 }
               }
             }
@@ -269,7 +305,6 @@ export async function getCustomerOrders(accessToken: string) {
   const response = await shopifyFetch({ query, variables: { customerAccessToken: accessToken } });
   return response.body?.customer;
 }
-
 // --- NEW: Add a New Address ---
 export async function addCustomerAddress(accessToken: string, address: any) {
   const query = `
